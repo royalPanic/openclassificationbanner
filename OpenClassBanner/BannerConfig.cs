@@ -9,8 +9,8 @@ public sealed class BannerConfig
     public string RightText { get; set; } = string.Empty;
     public string BackgroundColor { get; init; } = "#007A33";
     public string ForegroundColor { get; init; } = "#FFFFFF";
-    public int HeightPx { get; init; } = 36;
+    public int HeightPx { get; init; } = 50;
     public double FontSize { get; init; } = 16;
-    public double VerticalTextOffsetPx { get; init; } = 6;
+    public double VerticalTextOffsetPx { get; init; } = 2;
     public string FontFamily { get; init; } = "Segoe UI";
 }
