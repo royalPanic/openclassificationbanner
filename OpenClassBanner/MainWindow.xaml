@@ -1,0 +1,76 @@
+<Window x:Class="OpenClassBanner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:OpenClassBanner"
+        Title="Open Class Banner"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        VerticalContentAlignment="Stretch"
+        AllowsTransparency="False">
+    <Grid VerticalAlignment="Stretch"
+          Background="{Binding BackgroundColor, Converter={StaticResource HexColorToBrushConverter}}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0"
+                   Text="{Binding LeftText}"
+                   Foreground="{Binding ForegroundColor, Converter={StaticResource HexColorToBrushConverter}}"
+                   FontSize="{Binding FontSize}"
+                   FontFamily="{Binding FontFamily}"
+                   FontWeight="SemiBold"
+                   Margin="12,0,6,0"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Center"
+                   TextAlignment="Left"
+                   TextTrimming="CharacterEllipsis">
+            <TextBlock.Padding>
+                <MultiBinding Converter="{StaticResource FontSizeToPaddingConverter}">
+                    <Binding Path="FontSize" />
+                    <Binding Path="VerticalTextOffsetPx" />
+                </MultiBinding>
+            </TextBlock.Padding>
+        </TextBlock>
+        <TextBlock Grid.Column="1"
+                   Text="{Binding CenterText}"
+                   Foreground="{Binding ForegroundColor, Converter={StaticResource HexColorToBrushConverter}}"
+                   FontSize="{Binding FontSize}"
+                   FontFamily="{Binding FontFamily}"
+                   FontWeight="SemiBold"
+                   Margin="6,0"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextAlignment="Center"
+                   TextTrimming="CharacterEllipsis">
+            <TextBlock.Padding>
+                <MultiBinding Converter="{StaticResource FontSizeToPaddingConverter}">
+                    <Binding Path="FontSize" />
+                    <Binding Path="VerticalTextOffsetPx" />
+                </MultiBinding>
+            </TextBlock.Padding>
+        </TextBlock>
+        <TextBlock Grid.Column="2"
+                   Text="{Binding RightText}"
+                   Foreground="{Binding ForegroundColor, Converter={StaticResource HexColorToBrushConverter}}"
+                   FontSize="{Binding FontSize}"
+                   FontFamily="{Binding FontFamily}"
+                   FontWeight="SemiBold"
+                   Margin="6,0,12,0"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"
+                   TextAlignment="Right"
+                   TextTrimming="CharacterEllipsis">
+            <TextBlock.Padding>
+                <MultiBinding Converter="{StaticResource FontSizeToPaddingConverter}">
+                    <Binding Path="FontSize" />
+                    <Binding Path="VerticalTextOffsetPx" />
+                </MultiBinding>
+            </TextBlock.Padding>
+        </TextBlock>
+    </Grid>
+</Window>
