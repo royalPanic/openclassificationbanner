@@ -21,11 +21,13 @@ public sealed class ConfigManager : IDisposable
     private List<ConfigProfile> _profiles;
     private string _activeFileName;
 
-    public ConfigManager(string directoryPath)
+    public ConfigManager(string directoryPath, string? legacyDirectoryPath = null)
     {
         _directoryPath = directoryPath;
         _lastProfilePath = Path.Combine(directoryPath, LastProfileFileName);
         Directory.CreateDirectory(_directoryPath);
+        if (legacyDirectoryPath is not null)
+            MigrateLegacyConfiguration(legacyDirectoryPath);
         EnsureExampleProfile();
         _profiles = DiscoverProfiles();
         _activeFileName = ChooseInitialProfile(_profiles);
@@ -61,6 +63,59 @@ public sealed class ConfigManager : IDisposable
     }
 
     public string ActiveConfigPath => Path.Combine(_directoryPath, ActiveProfileFileName);
+
+    private void MigrateLegacyConfiguration(string legacyDirectoryPath)
+    {
+        if (string.Equals(
+                Path.GetFullPath(legacyDirectoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetFullPath(_directoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase) || !Directory.Exists(legacyDirectoryPath))
+        {
+            return;
+        }
+
+        var migratedProfiles = 0;
+        var migratedSelection = false;
+        try
+        {
+            foreach (var sourcePath in Directory.EnumerateFiles(legacyDirectoryPath, "*.json"))
+            {
+                if (!IsProfileCandidate(sourcePath))
+                    continue;
+
+                var destinationPath = Path.Combine(_directoryPath, Path.GetFileName(sourcePath));
+                if (File.Exists(destinationPath))
+                    continue;
+
+                try
+                {
+                    File.Copy(sourcePath, destinationPath);
+                    migratedProfiles++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Debug($"Unable to migrate a legacy configuration profile: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Unable to enumerate legacy configuration profiles: {ex.Message}");
+        }
+
+        var legacyLastProfilePath = Path.Combine(legacyDirectoryPath, LastProfileFileName);
+        if (!File.Exists(_lastProfilePath) && File.Exists(legacyLastProfilePath))
+        {
+            try
+            {
+                File.Copy(legacyLastProfilePath, _lastProfilePath);
+                migratedSelection = true;
+            }
+            catch (Exception ex) { Logger.Debug($"Unable to migrate legacy profile selection: {ex.Message}"); }
+        }
+
+        Logger.Debug($"Legacy config migration completed: {migratedProfiles} profile(s) and remembered selection migrated; selectionMigrated={migratedSelection}.");
+    }
 
     public void SelectProfile(string fileName)
     {

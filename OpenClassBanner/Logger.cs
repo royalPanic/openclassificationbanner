@@ -1,5 +1,6 @@
 using System.IO;
 using System.Globalization;
+using System.Diagnostics;
 
 namespace OpenClassBanner;
 
@@ -19,6 +20,12 @@ public static class Logger
         }
     }
 
+    internal static string? LogPath
+    {
+        get { lock (Sync) return _logPath; }
+    }
+
+    [Conditional("DEBUG")]
     public static void Debug(string message) => Write("DEBUG", message);
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);

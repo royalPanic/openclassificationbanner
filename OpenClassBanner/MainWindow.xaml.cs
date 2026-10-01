@@ -18,6 +18,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _monitorBounds = monitorBounds;
         _config = config;
+        Logger.Debug($"Creating banner window for monitor bounds {_monitorBounds} with target height {_config.HeightPx}px.");
         UpdateWindowHeight();
         DataContext = config;
         SourceInitialized += OnSourceInitialized;
@@ -36,6 +37,7 @@ public partial class MainWindow : Window
     {
         var source = (HwndSource)PresentationSource.FromVisual(this)!;
         UpdateWindowHeight();
+        Logger.Debug($"Banner window initialized for monitor bounds {_monitorBounds}; windowHandle=0x{source.Handle.ToInt64():X}.");
         _appBar = new AppBarHelper(source.Handle, source, _monitorBounds, _config.HeightPx);
         if (!_appBar.Register())
             Logger.Warn($"AppBar registration failed for monitor bounds {_monitorBounds}; displaying an overlay fallback.");
@@ -45,5 +47,6 @@ public partial class MainWindow : Window
     {
         var dpiScaleY = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
         Height = _config.HeightPx / dpiScaleY;
+        Logger.Debug($"Banner height calculated: monitorBounds={_monitorBounds}; configuredHeight={_config.HeightPx}px; dpiScaleY={dpiScaleY}; windowHeight={Height} DIP.");
     }
 }

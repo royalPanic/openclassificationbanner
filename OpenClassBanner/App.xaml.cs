@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 
 namespace OpenClassBanner;
@@ -16,15 +17,26 @@ public partial class App
         base.OnStartup(e);
         Logger.Initialize();
         Logger.Info("Open Class Banner starting.");
+#if DEBUG
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+#endif
 
-        _configManager = new ConfigManager(AppContext.BaseDirectory);
+        var installPaths = InstallPathResolver.Resolve(AppContext.BaseDirectory);
+        var configDirectory = installPaths.ConfigurationDirectory;
+        _configManager = new ConfigManager(configDirectory, AppContext.BaseDirectory);
+        Logger.Debug($"Environment: appVersion={typeof(App).Assembly.GetName().Version}; runtime={RuntimeInformation.FrameworkDescription}; OS={Environment.OSVersion.VersionString}; architecture={RuntimeInformation.ProcessArchitecture}; installScope={installPaths.Scope}; appDirectory='{AppContext.BaseDirectory}'; configDirectory='{configDirectory}'; logFile='{Logger.LogPath}'.");
+        Logger.Debug($"Configuration initialized with {_configManager.Profiles.Count} profile(s).");
         _configManager.ConfigurationChanged += OnConfigurationChanged;
         _configManager.ProfilesChanged += OnProfilesChanged;
         CreateTrayIcon();
 
-        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        Logger.Debug($"Detected {screens.Length} display(s).");
+        foreach (var screen in screens)
         {
             var bounds = screen.Bounds;
+            Logger.Debug($"Display '{screen.DeviceName}': bounds={bounds}; primary={screen.Primary}.");
             var window = new MainWindow(bounds, _configManager.Current);
             _windows.Add(window);
             window.Show();
@@ -32,6 +44,21 @@ public partial class App
 
         Logger.Info($"Started {_windows.Count} banner window(s).");
     }
+
+#if DEBUG
+    private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        Logger.Error("Unhandled WPF dispatcher exception", e.Exception);
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception)
+            Logger.Error($"Unhandled process exception; terminating={e.IsTerminating}", exception);
+        else
+            Logger.Error($"Unhandled process exception; terminating={e.IsTerminating}; exceptionObject={e.ExceptionObject}");
+    }
+#endif
 
     private void OnConfigurationChanged(BannerConfig config)
     {

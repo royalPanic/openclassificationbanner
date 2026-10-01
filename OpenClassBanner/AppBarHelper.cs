@@ -14,7 +14,8 @@ public sealed class AppBarHelper
     private const int AbnPosChanged = 1;
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpNoZOrder = 0x0004;
-    private static readonly uint CallbackMessage = RegisterWindowMessage("OpenClassBanner.AppBar.Callback");
+    private static readonly (uint Message, int Error) CallbackRegistration = RegisterCallbackMessage();
+    private static uint CallbackMessage => CallbackRegistration.Message;
 
     private readonly IntPtr _windowHandle;
     private readonly HwndSource _source;
@@ -37,16 +38,22 @@ public sealed class AppBarHelper
     public bool Register()
     {
         if (CallbackMessage == 0)
+        {
+            Logger.Debug($"RegisterWindowMessage failed; win32Error={CallbackRegistration.Error}.");
             return false;
+        }
 
         var data = CreateData();
-        _registered = SHAppBarMessage(AbmNew, ref data) != IntPtr.Zero;
+        var result = SHAppBarMessage(AbmNew, ref data);
+        _registered = result != IntPtr.Zero;
+        Logger.Debug($"ABM_NEW result=0x{result.ToInt64():X}; registered={_registered}; callbackMessage=0x{CallbackMessage:X}; monitorBounds={_monitorBounds}; height={_height}px.");
         Position();
         return _registered;
     }
 
     public void UpdateHeight(int height)
     {
+        Logger.Debug($"Updating AppBar height from {_height}px to {height}px for monitor bounds {_monitorBounds}.");
         _height = height;
         Position();
     }
@@ -56,7 +63,8 @@ public sealed class AppBarHelper
         var data = CreateData();
         if (_registered)
         {
-            SHAppBarMessage(AbmQueryPos, ref data);
+            var queryResult = SHAppBarMessage(AbmQueryPos, ref data);
+            Logger.Debug($"ABM_QUERYPOS result=0x{queryResult.ToInt64():X}; returnedRect=({data.Rect.Left},{data.Rect.Top},{data.Rect.Right},{data.Rect.Bottom}).");
             var top = Math.Max(_monitorBounds.Top, data.Rect.Top);
             data.Rect = new NativeRect
             {
@@ -65,7 +73,8 @@ public sealed class AppBarHelper
                 Right = _monitorBounds.Right,
                 Bottom = Math.Min(_monitorBounds.Bottom, top + _height)
             };
-            SHAppBarMessage(AbmSetPos, ref data);
+            var setResult = SHAppBarMessage(AbmSetPos, ref data);
+            Logger.Debug($"ABM_SETPOS result=0x{setResult.ToInt64():X}; requestedRect=({data.Rect.Left},{data.Rect.Top},{data.Rect.Right},{data.Rect.Bottom}).");
         }
         else
         {
@@ -78,8 +87,9 @@ public sealed class AppBarHelper
             };
         }
 
-        SetWindowPos(_windowHandle, IntPtr.Zero, data.Rect.Left, data.Rect.Top,
+        var positioned = SetWindowPos(_windowHandle, IntPtr.Zero, data.Rect.Left, data.Rect.Top,
             data.Rect.Right - data.Rect.Left, data.Rect.Bottom - data.Rect.Top, SwpNoActivate | SwpNoZOrder);
+        Logger.Debug($"SetWindowPos success={positioned}; win32Error={(positioned ? 0 : Marshal.GetLastWin32Error())}; rect=({data.Rect.Left},{data.Rect.Top},{data.Rect.Right},{data.Rect.Bottom}); registered={_registered}.");
     }
 
     private APPBARDATA CreateData() => new()
@@ -117,7 +127,8 @@ public sealed class AppBarHelper
         if (_registered)
         {
             var data = CreateData();
-            SHAppBarMessage(AbmRemove, ref data);
+            var result = SHAppBarMessage(AbmRemove, ref data);
+            Logger.Debug($"ABM_REMOVE result=0x{result.ToInt64():X}; monitorBounds={_monitorBounds}.");
             _registered = false;
         }
 
@@ -146,6 +157,12 @@ public sealed class AppBarHelper
 
     [DllImport("shell32.dll", EntryPoint = "SHAppBarMessage")]
     private static extern IntPtr SHAppBarMessage(uint message, ref APPBARDATA data);
+
+    private static (uint Message, int Error) RegisterCallbackMessage()
+    {
+        var message = RegisterWindowMessage("OpenClassBanner.AppBar.Callback");
+        return (message, Marshal.GetLastWin32Error());
+    }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint RegisterWindowMessage(string message);
